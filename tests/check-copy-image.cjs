@@ -1,0 +1,31 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const root='';
+const worker=fs.readFileSync(root+'js/clipboard-worker.js','utf8');
+const source=fs.readFileSync(root+'js/modern.js','utf8');
+const pngBytes=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64'));
+let handler, response;
+const workerContext={URL,Uint8Array,String,btoa,chrome:{runtime:{onMessage:{addListener(fn){handler=fn;}}}},fetch:async()=>response};
+vm.createContext(workerContext);vm.runInContext(worker,workerContext);
+function send(url){return new Promise(resolve=>{assert.equal(handler({type:'gir-fetch-image',url},{},r=>resolve(JSON.parse(JSON.stringify(r)))),true);});}
+(async()=>{
+ response=new Response(pngBytes,{headers:{'content-type':'image/png'}});
+ const result=await send('https://images.example/one.png');
+ assert.equal(result.ok,true);
+ assert.deepEqual(Buffer.from(result.base64,'base64'),Buffer.from(pngBytes));
+ let decoded,closed=false;
+ const content={Blob,Uint8Array,atob,chrome:{runtime:{sendMessage:async()=>result}},createImageBitmap:async blob=>{decoded=new Uint8Array(await blob.arrayBuffer());return {width:1,height:1,close(){closed=true;}};},OffscreenCanvas:class{getContext(){return {drawImage(){}};}async convertToBlob(){return new Blob([decoded],{type:'image/png'});}}};
+ vm.createContext(content);
+ const helper=source.slice(source.indexOf('  async function prepareClipboardImage'),source.indexOf('  function ensurePanel'));
+ vm.runInContext(helper+'\nthis.prepare=prepareClipboardImage;',content);
+ const png=await content.prepare('https://images.example/one.png');
+ assert.equal(png.type,'image/png');assert.deepEqual(Buffer.from(await png.arrayBuffer()),Buffer.from(pngBytes));assert(closed);
+ response=new Response('Forbidden',{status:403});assert.match((await send('https://images.example/blocked')).error,/403/);
+ response=new Response('<html>error</html>',{headers:{'content-type':'text/html'}});assert.equal((await send('https://images.example/html')).ok,false);
+ assert.equal(JSON.parse(fs.readFileSync(root+'manifest.json')).version,'2.1.0');
+ const click=source.slice(source.indexOf("viewer.querySelector('.gir-copy-image').addEventListener"),source.indexOf("window.addEventListener('keydown'"));
+ assert(!click.includes('await prepareClipboardImage'));
+ assert(click.includes("new ClipboardItem({ 'image/png': png })"));
+ console.log('Passed: image bytes survive Chrome JSON messages; content reconstructs PNG bytes; bitmap closes; HTTP/non-image errors reported; clipboard write starts with a promise during click; version 2.1.0.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

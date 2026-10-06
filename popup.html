@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classic Google Images settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <h1><img src="icon/32.png" width="32" height="32" alt=""> Classic Google Images</h1>
+    <fieldset>
+      <legend>Preview theme</legend>
+      <div class="theme-options">
+        <button class="swatch dark" type="button" data-theme="dark" title="Dark charcoal" aria-label="Dark charcoal theme"></button>
+        <button class="swatch light" type="button" data-theme="light" title="White light" aria-label="White light theme"></button>
+        <button class="swatch sepia" type="button" data-theme="sepia" title="Sepia" aria-label="Sepia theme"></button>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Maximum image enlargement</legend>
+      <p class="help">Images can still shrink to fit the preview. This limit only controls enlargement.</p>
+      <div class="scale-options">
+        <label><input type="radio" name="scale" value="0"><span>No upscaling</span></label>
+        <label><input type="radio" name="scale" value="50"><span>50% larger (1.5×)</span></label>
+        <label><input type="radio" name="scale" value="70"><span>70% larger (1.7×)</span></label>
+        <label><input type="radio" name="scale" value="100"><span>100% larger (2×, default)</span></label>
+        <label><input type="radio" name="scale" value="150"><span>150% larger (2.5×)</span></label>
+        <label><input type="radio" name="scale" value="200"><span>200% larger (3×)</span></label>
+        <label><input type="radio" name="scale" value="300"><span>300% larger (4×)</span></label>
+        <label class="custom"><input type="radio" name="scale" value="custom"><span>Custom</span>
+          <input id="custom-value" type="number" min="0" max="1000" step="1" aria-label="Custom maximum enlargement percentage">
+          <span>%</span>
+        </label>
+      </div>
+    </fieldset>
+    <p id="status" aria-live="polite"></p>
+    <footer><a href="https://github.com/shubhamsinghcol/classic-google-images" target="_blank" rel="noopener noreferrer">GitHub</a><br>© Shubham Singh 2026</footer>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
