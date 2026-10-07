@@ -1,0 +1,14 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('js/modern.js','utf8');
+function style(properties){const names=Object.keys(properties);names.getPropertyValue=name=>properties[name];return names;}
+const rule={selectorText:'[data-snc="grid"]',style:style({'grid-template-columns':'repeat(3, 1fr)','grid-auto-rows':'calc(0.005 * 100vw)'}),cssRules:[]};
+const tileRule={selectorText:'[data-snc="grid"] [data-snf="tile"]',style:style({'grid-row-start':'span 44'}),cssRules:[]};
+let width,removed=false,styleRemoved=false,open=true;
+const target={isConnected:true,setAttribute(){},removeAttribute(){removed=true;},getBoundingClientRect:()=>({left:20}),style:{setProperty:(name,value)=>{width=value;},removeProperty(){width=null;}}};
+const context={panel:{classList:{contains:()=>open},getBoundingClientRect:()=>({left:600})},currentLayout:()=>context.settings.layout,settings:{layout:'vertical'},activeCollageImage:()=>null,scheduleHalo(){},MutationObserver:class{observe(){}disconnect(){}},document:{querySelector:()=>target,createElement:()=>({remove(){styleRemoved=true;}}),head:{append(){}},documentElement:{},styleSheets:[{cssRules:[{conditionText:'(min-width: 717px) and (max-width: 973px)',cssRules:[rule]},{conditionText:'(max-width: 717px), (min-width: 973px)',cssRules:[tileRule]}]}]}};
+vm.createContext(context);vm.runInContext(source.slice(source.indexOf('  let collageTarget'),source.indexOf('  function updateCollageSpace()'))+'\nthis.rules=responsiveCollageRules;this.update=updateCollageLayout;',context);
+const css=context.rules(context.document.styleSheets);assert(css.includes('@container gir-collage (min-width: 717px) and (max-width: 973px)'));assert(css.includes('100cqw'));assert(css.includes('grid-row-start:span 44!important;'));assert.equal((css.match(/grid-row-start/g)||[]).length,2);
+context.update();assert.equal(width,'568px');context.panel.getBoundingClientRect=()=>({left:350});context.update();assert.equal(width,'318px');
+open=false;context.update();assert.equal(width,null);assert(removed);assert(styleRemoved);
+const feedbackContext={};vm.createContext(feedbackContext);vm.runInContext(source.slice(source.indexOf('  function copyFeedback('),source.indexOf('  function openNativeSave('))+'\nthis.feedback=copyFeedback;',feedbackContext);const label={};let aria;const button={querySelector:()=>label,setAttribute:(name,value)=>{aria=value;}};feedbackContext.feedback(button,'Copied image');assert.equal(label.textContent,'Copied image');assert.equal(aria,'Copied image');assert.equal(button.title,'Copied image');
+console.log('Passed: native masonry breakpoints use collage width; viewport units become container units; native spans retained; resize reserves space; close restores layout; copy feedback preserves icon markup.');

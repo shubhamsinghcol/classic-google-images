@@ -25,5 +25,5 @@ assert(!source.includes('findPageImage'));
 const worker = fs.readFileSync(root+'js/clipboard-worker.js','utf8');
 assert(!worker.includes('og:image'));
 assert(!worker.includes('gir-find-page-image'));
-assert.equal(JSON.parse(fs.readFileSync(root+'manifest.json')).version,'2.1.0');
-console.log('Passed: same-page images stay distinct; X media stays distinct from profile; escaped URLs decode; ambiguous pairs rejected; webpage substitution removed; version 2.1.0.');
+assert.equal(JSON.parse(fs.readFileSync(root+'manifest.json')).version,'2.6.0');
+console.log('Passed: same-page images stay distinct; X media stays distinct from profile; escaped URLs decode; ambiguous pairs rejected; webpage substitution removed; version 2.6.0.');

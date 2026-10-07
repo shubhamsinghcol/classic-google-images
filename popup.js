@@ -1,5 +1,5 @@
-const DEFAULTS = { theme: 'dark', upscalePercent: 200 };
-const radios = [...document.querySelectorAll('input[type="radio"]')];
+const DEFAULTS = { theme: 'dark', upscalePercent: 100, layout: 'default', defaultLayout: null };
+const radios = [...document.querySelectorAll('input[name="scale"]')];
 const themeButtons = [...document.querySelectorAll('[data-theme]')];
 const customInput = document.querySelector('#custom-value');
 const status = document.querySelector('#status');
@@ -16,6 +16,10 @@ function selected(name) {
 
 function restore(values) {
   setThemeSelection(values.theme);
+  const defaultLayout = values.defaultLayout || (['horizontal', 'vertical'].includes(values.layout) ? values.layout : 'vertical');
+  document.querySelector(`input[name="default-layout"][value="${defaultLayout === 'horizontal' ? 'horizontal' : 'vertical'}"]`).checked = true;
+  const mode = ['horizontal', 'vertical', 'automatic'].includes(values.layout) ? values.layout : defaultLayout;
+  document.querySelector(`input[name="layout"][value="${mode === 'horizontal' || mode === 'automatic' ? mode : 'vertical'}"]`).checked = true;
   const scale = Number(values.upscalePercent);
   const preset = document.querySelector(`input[name="scale"][value="${scale}"]`);
   if (preset) preset.checked = true;
@@ -58,3 +62,12 @@ customInput.addEventListener('input', () => {
   customInput.setCustomValidity('');
   chrome.storage.sync.set({ upscalePercent: value }, () => setStatus('Custom enlargement limit saved'));
 });
+
+document.querySelectorAll('input[name="layout"]').forEach(radio => radio.addEventListener('change', () => {
+  chrome.storage.sync.set({ layout: radio.value, defaultLayout: selected('default-layout')?.value || 'vertical' }, () => setStatus('Preview layout saved'));
+}));
+
+document.querySelectorAll('input[name="default-layout"]').forEach(radio => radio.addEventListener('change', () => {
+  const mode = selected('layout')?.value || 'vertical';
+  chrome.storage.sync.set({ defaultLayout: radio.value, layout: mode }, () => setStatus('Default orientation saved'));
+}));

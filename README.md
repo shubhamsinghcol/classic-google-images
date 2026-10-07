@@ -2,11 +2,14 @@
 
 ![Classic Google Images icon](icon/128.png)
 
-A Chrome and Brave extension with a spacious classic preview panel for Google Images.
+A Chrome and Brave extension with a spacious classic preview panel for Google Images. Current version: **2.6.0**.
 
 ## Features
 
-- Resizable preview with dark charcoal, white and sepia themes.
+- Resizable horizontal or right-side vertical preview with dark charcoal, white and sepia themes.
+- Illustrated Horizontal, Vertical and Auto layout selector, with vertical as the default for new installs. Auto follows the image shape and uses your chosen default for near-square images.
+- Google collection Save and Google Lens controls beside close and navigation.
+- Vertical preview prioritizes image size, with copy icons in the top row and neighboring-image previews below the title and URL; choose the layout in the toolbar popup. The collage reflows beside it as you resize, with preview width capped at 75% of the window.
 - Original image URLs when available, with thumbnail fallback.
 - Copy photo URL and copy image buttons.
 - Previous and next image previews, without wrapping at the ends.
@@ -32,4 +35,6 @@ MIT licensed. This release contains the replacement viewer, popup and clipboard 
 
 ## Development
 
-No build step or dependencies are required. With Node.js installed, run `npm test` for the image mapping, clipboard transport and preloading checks. These checks do not replace testing the unpacked extension in a browser.
+No build step or dependencies are required. With Node.js installed, run `npm test` for image mapping, clipboard transport, preloading, selected-image focus, collage resizing and automatic orientation checks. These checks do not replace testing the unpacked extension in a browser.
+
+Choose a default orientation in the popup (vertical for new installs). Automatic orientation uses vertical for images at least 40% taller than wide, horizontal for images at least 40% wider than tall, and your default for other shapes. It updates on clicks, preview buttons, and keyboard navigation using the loaded image dimensions.

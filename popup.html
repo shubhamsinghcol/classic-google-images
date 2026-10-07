@@ -9,6 +9,56 @@
 <body>
   <main>
     <h1><img src="icon/32.png" width="32" height="32" alt=""> Classic Google Images</h1>
+    <fieldset class="preview-layout">
+      <legend>Preview layout</legend>
+      <div class="orientation-options">
+        <label class="layout-card">
+          <input type="radio" name="layout" value="horizontal" aria-label="Horizontal">
+          <span class="layout-card-face">
+            <svg viewBox="0 0 76 58" aria-hidden="true" focusable="false">
+              <rect class="mini-window" x="3" y="5" width="70" height="48" rx="5"/>
+              <path class="mini-tiles" d="M10 13h16v10H10zM30 13h16v10H30zM50 13h16v10H50z"/>
+              <path class="mini-panel" d="M4 29h68v18a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5z"/>
+              <rect class="mini-photo" x="26" y="33" width="24" height="15" rx="2"/>
+            </svg>
+            <span>Horizontal</span>
+          </span>
+        </label>
+        <label class="layout-card">
+          <input type="radio" name="layout" value="vertical" aria-label="Vertical">
+          <span class="layout-card-face">
+            <svg viewBox="0 0 76 58" aria-hidden="true" focusable="false">
+              <rect class="mini-window" x="3" y="5" width="70" height="48" rx="5"/>
+              <path class="mini-tiles" d="M10 13h11v13H10zM25 13h11v13H25zM10 30h11v15H10zM25 30h11v15H25z"/>
+              <path class="mini-panel" d="M42 6h25a5 5 0 0 1 5 5v36a5 5 0 0 1-5 5H42z"/>
+              <rect class="mini-photo" x="47" y="14" width="20" height="29" rx="2"/>
+            </svg>
+            <span>Vertical</span>
+          </span>
+        </label>
+        <label class="layout-card">
+          <input type="radio" name="layout" value="automatic" aria-label="Auto">
+          <span class="layout-card-face">
+            <svg viewBox="0 0 76 58" aria-hidden="true" focusable="false">
+              <rect class="mini-panel" x="7" y="9" width="23" height="35" rx="4"/>
+              <rect class="mini-photo" x="12" y="15" width="13" height="23" rx="2"/>
+              <rect class="mini-panel" x="40" y="22" width="30" height="22" rx="4"/>
+              <rect class="mini-photo" x="45" y="27" width="20" height="12" rx="2"/>
+              <path class="mini-arrow" d="M35 12h21m-4-4 4 4-4 4M41 50H20m4-4-4 4 4 4"/>
+            </svg>
+            <span>Auto</span>
+          </span>
+        </label>
+      </div>
+      <p class="help orientation-help">Auto follows the image shape. Near-square images use your default below.</p>
+    </fieldset>
+    <fieldset>
+      <legend>Default orientation</legend>
+      <div class="layout-options">
+        <label><input type="radio" name="default-layout" value="horizontal"><span>Horizontal</span></label>
+        <label><input type="radio" name="default-layout" value="vertical"><span>Vertical</span></label>
+      </div>
+    </fieldset>
     <fieldset>
       <legend>Preview theme</legend>
       <div class="theme-options">

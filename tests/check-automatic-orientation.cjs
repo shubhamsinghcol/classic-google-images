@@ -1,0 +1,17 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('js/modern.js','utf8');
+const context={};vm.createContext(context);vm.runInContext(source.slice(source.indexOf('  function selectOrientation('),source.indexOf('  function currentLayout()'))+'\nthis.choose=selectOrientation;',context);
+const choose=context.choose;
+assert.equal(choose('default',undefined,1600,900),'vertical');
+assert.equal(choose('default','horizontal',700,1800),'horizontal');
+assert.equal(choose('automatic','horizontal',700,1800),'vertical');
+assert.equal(choose('automatic','vertical',1800,700),'horizontal');
+assert.equal(choose('automatic','vertical',1000,1100),'vertical');
+assert.equal(choose('automatic','horizontal',1100,1000),'horizontal');
+assert.equal(choose('automatic','vertical',1400,1000),'horizontal');
+assert.equal(choose('automatic','horizontal',1000,1400),'vertical');
+assert.equal(choose('automatic','vertical',0,0),'vertical');
+assert.equal(choose('horizontal','vertical',700,1800),'horizontal');
+assert.equal(choose('vertical','horizontal',1800,700),'vertical');
+assert(source.includes("layout: 'default', defaultLayout: 'vertical'"));
+console.log('Passed: vertical install default; fixed defaults; automatic tall/wide/square routing; 40% boundaries; unloaded dimensions; legacy fixed orientations.');

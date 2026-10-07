@@ -23,9 +23,9 @@ function send(url){return new Promise(resolve=>{assert.equal(handler({type:'gir-
  assert.equal(png.type,'image/png');assert.deepEqual(Buffer.from(await png.arrayBuffer()),Buffer.from(pngBytes));assert(closed);
  response=new Response('Forbidden',{status:403});assert.match((await send('https://images.example/blocked')).error,/403/);
  response=new Response('<html>error</html>',{headers:{'content-type':'text/html'}});assert.equal((await send('https://images.example/html')).ok,false);
- assert.equal(JSON.parse(fs.readFileSync(root+'manifest.json')).version,'2.1.0');
+ assert.equal(JSON.parse(fs.readFileSync(root+'manifest.json')).version,'2.6.0');
  const click=source.slice(source.indexOf("viewer.querySelector('.gir-copy-image').addEventListener"),source.indexOf("window.addEventListener('keydown'"));
  assert(!click.includes('await prepareClipboardImage'));
  assert(click.includes("new ClipboardItem({ 'image/png': png })"));
- console.log('Passed: image bytes survive Chrome JSON messages; content reconstructs PNG bytes; bitmap closes; HTTP/non-image errors reported; clipboard write starts with a promise during click; version 2.1.0.');
+ console.log('Passed: image bytes survive Chrome JSON messages; content reconstructs PNG bytes; bitmap closes; HTTP/non-image errors reported; clipboard write starts with a promise during click; version 2.6.0.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

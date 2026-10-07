@@ -1,9 +1,9 @@
 {
   "name": "classic-google-images",
-  "version": "2.1.0",
+  "version": "2.6.0",
   "private": true,
   "license": "MIT",
   "scripts": {
-    "test": "node tests/check-image-sources.cjs && node tests/check-copy-image.cjs && node tests/check-preload.cjs"
+    "test": "node tests/check-image-sources.cjs && node tests/check-copy-image.cjs && node tests/check-preload.cjs && node tests/check-collage-focus.cjs && node tests/check-layout.cjs && node tests/check-collage-layout.cjs && node tests/check-automatic-orientation.cjs"
   }
 }
