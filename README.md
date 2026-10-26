@@ -2,7 +2,7 @@
 
 ![Classic Google Images icon](icon/128.png)
 
-A Chrome and Brave extension with a spacious classic preview panel for Google Images. Current version: **2.6.0**.
+A Chrome and Brave extension with a spacious classic preview panel for Google Images. Current version: **2.6.1**.
 
 ## Features
 

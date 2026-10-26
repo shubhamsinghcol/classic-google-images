@@ -344,7 +344,7 @@
       .gir-resize-edge:after{content:"";display:block;width:44px;height:4px;margin:4px 178px 0 0;border-radius:4px;background:#686b70}
       .gir-resize-edge:hover:after,.gir-resize-edge:focus:after{background:#bdc1c6}
       .gir-photo{height:100%;flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:0;box-sizing:border-box;position:relative}
-      .gir-photo img{display:block;flex:none;width:auto;height:auto;max-width:none;max-height:none;object-fit:contain;opacity:1;transition:opacity .12s ease-out}
+      .gir-photo img{display:block;flex:none;width:auto;height:auto;max-width:none;max-height:none;object-fit:contain;background:#fff;color-scheme:light;opacity:1;transition:opacity .12s ease-out}
       .gir-info{width:400px;flex:none;position:relative;padding:18px 8px 8px 16px;box-sizing:border-box;overflow-y:auto}
       .gir-info h2{font-size:26px;font-weight:400;line-height:1.35;margin:0 0 6px}
       .gir-title{font-size:26px;font-weight:400;color:var(--gir-fg,#eee);text-decoration:none}
@@ -368,11 +368,11 @@
       .gir-native-save>button{align-self:flex-start;margin:8px;padding:8px 14px;border:0;border-radius:20px;background:var(--gir-button,#3c4043);color:var(--gir-fg,#eee);cursor:pointer}
       .gir-native-save iframe{width:100%;flex:1;min-height:0;border:0;background:white}
       .gir-stack{display:none}
-      :host(.gir-vertical){left:auto;top:12px;right:12px;bottom:12px;width:clamp(320px,42vw,560px);max-width:var(--gir-max-width,75vw);height:auto!important;border-radius:12px}
+      :host(.gir-vertical){left:auto;top:var(--gir-top,150px);right:12px;bottom:12px;width:clamp(320px,63vw,840px);max-width:var(--gir-max-width,75vw);height:auto!important;border-radius:12px}
       :host(.gir-vertical) .gir-info{display:none}
       :host(.gir-vertical) .gir-stack{display:block;width:100%;height:100%;overflow-y:auto;scrollbar-color:var(--gir-secondary,#c4c7c5) var(--gir-bg,#202124);box-sizing:border-box;padding:0 14px 18px}
       :host(.gir-vertical) .gir-controls{position:sticky;top:0;z-index:1;background:var(--gir-bg,#202124);margin:0 -4px;padding:12px 0;gap:4px;justify-content:space-between;flex-wrap:wrap}
-      :host(.gir-vertical) .gir-photo{width:100%;height:calc(100vh -150px);min-height:180px;flex:none}
+      :host(.gir-vertical) .gir-photo{width:100%;height:calc(100vh - var(--gir-top,150px) - 100px);min-height:180px;flex:none}
       :host(.gir-vertical) .gir-controls button{flex:none;width:38px;height:40px;font-size:24px}
       :host(.gir-vertical) .gir-copy-label{display:none}
       :host(.gir-vertical) .gir-actions{display:none}
@@ -479,7 +479,14 @@
     window.addEventListener('keydown', event => {
       if (!panel.classList.contains('gir-open')) return;
       if (!['Escape', 'ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-      if (event.composedPath().includes(resizeEdge)) return;
+      const path = event.composedPath();
+      if (path.includes(resizeEdge)) return;
+      if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing || path.some(node =>
+        node?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(node?.tagName) ||
+        ['textbox', 'searchbox', 'combobox'].includes(node?.getAttribute?.('role')))) {
+        stopArrowNavigation();
+        return;
+      }
       event.preventDefault();
       event.stopImmediatePropagation();
       if (event.key === 'Escape' && viewer.querySelector('.gir-native-save')) viewer.querySelector('.gir-native-save').remove();
@@ -498,6 +505,7 @@
       if (event.key === heldArrow) stopArrowNavigation();
     }, true);
     window.addEventListener('blur', stopArrowNavigation);
+    window.addEventListener('focusin', stopArrowNavigation);
     window.addEventListener('resize', () => { fitPreviewImage(); updateCollageSpace(); scheduleHalo(); });
     window.addEventListener('scroll', scheduleHalo, { capture: true, passive: true });
     new ResizeObserver(() => { fitPreviewImage(); updateCollageSpace(); scheduleHalo(); }).observe(panel);
@@ -546,7 +554,7 @@
     const vertical = currentLayout() === 'vertical';
     const scale = Math.min(
       frame.clientWidth / image.naturalWidth,
-      (vertical ? Math.max(180, window.innerHeight - 150) : frame.clientHeight) / image.naturalHeight,
+      (vertical ? Math.max(80, window.innerHeight - verticalPanelTop() - 100) : frame.clientHeight) / image.naturalHeight,
       1 + Math.max(0, Number(settings.upscalePercent) || 0) / 100 // 0% disables enlargement; 100% means 2x original size.
     );
     if (vertical) frame.style.height = `${Math.round(image.naturalHeight * scale)}px`;
@@ -645,7 +653,16 @@
     scheduleHalo();
   }
 
+  function verticalPanelTop() {
+    return Math.min(Math.max(12, collageVisibleTop() + 12), Math.max(12, window.innerHeight - 240));
+  }
+
+  function updatePanelTop() {
+    if (panel) panel.style.setProperty('--gir-top', `${verticalPanelTop()}px`);
+  }
+
   function updateCollageSpace() {
+    updatePanelTop();
     if (panel) panel.style.setProperty('--gir-max-width', `${verticalWidthLimit()}px`);
     updateCollageLayout();
     if (!panel?.classList.contains('gir-open')) return;
@@ -664,6 +681,7 @@
     if (haloFrame !== null) return;
     haloFrame = requestAnimationFrame(() => {
       haloFrame = null;
+      updatePanelTop();
       paintCollageHalo();
     });
   }
