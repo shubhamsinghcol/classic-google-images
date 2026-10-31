@@ -4,7 +4,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   (async () => {
     const imageUrl = new URL(message.url);
     if (!['http:', 'https:'].includes(imageUrl.protocol)) throw new Error('Only HTTP and HTTPS image URLs can be copied.');
-    const response = await fetch(imageUrl.href, { credentials: 'omit' });
+    const response = await fetch(imageUrl.href, { credentials: 'omit', signal: AbortSignal.timeout(20000) });
     if (!response.ok) throw new Error(`Image fetch failed (${response.status}).`);
     const blob = await response.blob();
     if (blob.type && !blob.type.startsWith('image/') && blob.type !== 'application/octet-stream') {

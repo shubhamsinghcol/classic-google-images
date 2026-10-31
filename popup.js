@@ -14,12 +14,17 @@ function selected(name) {
   return document.querySelector(`input[name="${name}"]:checked`);
 }
 
+function updateOrientationVisibility() {
+  document.querySelector("#auto-orientation").hidden = selected("layout")?.value !== "automatic";
+}
+
 function restore(values) {
   setThemeSelection(values.theme);
   const defaultLayout = values.defaultLayout || (['horizontal', 'vertical'].includes(values.layout) ? values.layout : 'vertical');
   document.querySelector(`input[name="default-layout"][value="${defaultLayout === 'horizontal' ? 'horizontal' : 'vertical'}"]`).checked = true;
   const mode = ['horizontal', 'vertical', 'automatic'].includes(values.layout) ? values.layout : defaultLayout;
   document.querySelector(`input[name="layout"][value="${mode === 'horizontal' || mode === 'automatic' ? mode : 'vertical'}"]`).checked = true;
+  updateOrientationVisibility();
   const scale = Number(values.upscalePercent);
   const preset = document.querySelector(`input[name="scale"][value="${scale}"]`);
   if (preset) preset.checked = true;
@@ -64,6 +69,7 @@ customInput.addEventListener('input', () => {
 });
 
 document.querySelectorAll('input[name="layout"]').forEach(radio => radio.addEventListener('change', () => {
+  updateOrientationVisibility();
   chrome.storage.sync.set({ layout: radio.value, defaultLayout: selected('default-layout')?.value || 'vertical' }, () => setStatus('Preview layout saved'));
 }));
 

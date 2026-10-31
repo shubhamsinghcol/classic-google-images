@@ -49,3 +49,16 @@ footer a { color: #315b9b; display: inline-block; margin-bottom: 6px; }
 .layout-options input:checked + span { background: #fff; color: #202124; box-shadow: 0 1px 3px #0002; }
 .orientation-help { margin: 12px 0 0; font-size: 12px; }
 @media (prefers-reduced-motion: reduce) { .layout-card-face { transition: none; } }
+
+#auto-orientation[hidden] { display: none; }
+#default-orientation-label { margin: 12px 0 7px; font-size: 12px; font-weight: 600; }
+
+.system-theme-help { margin: 10px 0 8px; font-size: 12px; }
+.system-theme-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.system-theme { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 7px; border: 1px solid #dadce0; border-radius: 7px; background: #fff; color: #202124; font: 12px Arial, sans-serif; cursor: pointer; }
+.system-theme[aria-pressed="true"] { border-color: #1a73e8; background: #edf4ff; }
+.system-theme:hover { border-color: #a9c5eb; }
+.system-theme:focus-visible { outline: 2px solid #1a73e8; outline-offset: 2px; }
+.split-swatch { flex: none; width: 24px; height: 24px; border: 1px solid #9aa0a6; border-radius: 50%; }
+.white-black { background: linear-gradient(135deg, #fff 50%, #000 50%); }
+.sepia-black { background: linear-gradient(135deg, #f4ecd8 50%, #000 50%); }

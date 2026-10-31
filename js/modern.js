@@ -43,6 +43,10 @@
   const DEFAULT_SETTINGS = { theme: 'dark', upscalePercent: 100, layout: 'default', defaultLayout: 'vertical' };
   let settings = { ...DEFAULT_SETTINGS };
   let activeDimensions = null;
+  const systemColorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+  systemColorScheme.addEventListener('change', () => {
+    if (['system-light', 'system-sepia'].includes(settings.theme)) applySettings();
+  });
 
   function loadSettings() {
     try {
@@ -65,13 +69,18 @@
   function applySettings() {
     if (!viewer) return;
     const palettes = {
+      black: ['#000', '#eee', '#242424', '#f1f3f4', '#373737', '#c4c7c5'],
       dark: ['#202124', '#eee', '#3c4043', '#f1f3f4', '#4b4f52', '#c4c7c5'],
       light: ['#fff', '#202124', '#e8eaed', '#202124', '#dadce0', '#5f6368'],
       sepia: ['#f4ecd8', '#433728', '#e6d8ba', '#433728', '#d9c9a8', '#68563e']
     };
-    const [background, foreground, button, buttonText, hover, secondary] = palettes[settings.theme] || palettes.dark;
+    const theme = settings.theme === 'system-light' || settings.theme === 'system-sepia'
+      ? (systemColorScheme.matches ? 'black' : settings.theme === 'system-sepia' ? 'sepia' : 'light')
+      : settings.theme;
+    const [background, foreground, button, buttonText, hover, secondary] = palettes[theme] || palettes.dark;
     const host = viewer.host;
     host.style.setProperty('--gir-bg', background);
+    host.style.setProperty('--gir-border', theme === 'light' || theme === 'sepia' ? '1px solid #000' : 'none');
     host.style.setProperty('--gir-fg', foreground);
     host.style.setProperty('--gir-button', button);
     host.style.setProperty('--gir-button-text', buttonText);
@@ -115,13 +124,12 @@
     const copyUrl = viewer.querySelector('.gir-copy-url');
     const copyImage = viewer.querySelector('.gir-copy-image');
     photo.style.removeProperty('height');
+    controls.append(copyImage, copyUrl);
     if (vertical) {
-      controls.append(copyImage, copyUrl);
       stack.append(controls, photo, title, url, thumbnails);
     }
     else {
       panel.shadowRoot.insertBefore(photo, info);
-      actions.append(copyUrl, copyImage);
       info.prepend(controls, title, url, actions, thumbnails);
     }
     if (changed) {
@@ -133,7 +141,7 @@
     edge.setAttribute('aria-valuemin', String(vertical ? Math.min(320, verticalWidthLimit()) : Math.min(340, Math.round(window.innerHeight * 0.42))));
     edge.setAttribute('aria-valuemax', String(vertical ? verticalWidthLimit() : Math.round(window.innerHeight * 0.88)));
     updateCollageSpace();
-    scheduleHalo();
+    schedulePreviewUpdate();
   }
 
   function cleanGoogleMarkup(value) {
@@ -306,6 +314,44 @@
     }).map(getItem).filter(item => item.src && !item.src.startsWith('data:'));
   }
 
+  // Keep Google's category row and its floating wrapper in normal flow.
+  // Google may still toggle sticky classes while scrolling; these rules stop
+  // that wrapper from reappearing over results on a slight upward scroll.
+  const categoryStyle = document.createElement('style');
+  categoryStyle.textContent = '#UpCcGe,.UpCcGe,:has(> #UpCcGe),:has(> .UpCcGe){position:relative!important;inset:auto!important;transform:none!important;transition:none!important;visibility:visible!important;opacity:1!important}';
+  document.documentElement.append(categoryStyle);
+
+  let floatingWindow = null;
+  async function toggleFloatingImage() {
+    if (floatingWindow && !floatingWindow.closed) { floatingWindow.close(); return; }
+    const button = viewer.querySelector('.gir-float');
+    const image = viewer.querySelector('.gir-photo img');
+    try {
+      // Request directly from the click to preserve transient user activation.
+      const pip = await window.documentPictureInPicture.requestWindow({ width: 480, height: 420 });
+      floatingWindow = pip;
+      const doc = pip.document;
+      doc.title = '';
+      const style = doc.createElement('style');
+      style.textContent = 'html,body{margin:0;width:100%;height:100%;background:#202124}body{display:flex;align-items:center;justify-content:center}img{width:100%;height:100%;object-fit:contain}';
+      doc.head.append(style);
+      const photo = doc.createElement('img');
+      photo.src = image.currentSrc || image.src;
+      photo.alt = image.alt;
+      doc.body.append(photo);
+      button.setAttribute('aria-pressed', 'true');
+      button.title = 'Return image to preview';
+      pip.addEventListener('pagehide', () => {
+        if (floatingWindow === pip) floatingWindow = null;
+        button.setAttribute('aria-pressed', 'false');
+        button.title = 'Float image above other tabs';
+      }, { once: true });
+    } catch (error) {
+      button.title = error.message || 'Unable to float this image.';
+      console.error('Classic Google Images: Floating image failed', error);
+    }
+  }
+
   async function prepareClipboardImage(imageUrl) {
     const result = await chrome.runtime.sendMessage({ type: 'gir-fetch-image', url: imageUrl });
     if (!result?.ok) throw new Error(result?.error || 'Unable to fetch this image.');
@@ -338,7 +384,7 @@
     panel.setAttribute('aria-label', 'Google Images preview');
     viewer = panel.attachShadow({ mode: 'open' });
     viewer.innerHTML = `<style>
-      :host{box-sizing:border-box;position:fixed;left:12px;right:12px;bottom:12px;width:auto;height:60vh;background:var(--gir-bg,#202124);color:var(--gir-fg,#eee);display:none;z-index:2147483647;font:13px Arial,sans-serif;overflow:hidden;box-shadow:0 4px 24px #0009}
+      :host{box-sizing:border-box;border:var(--gir-border,none);position:fixed;left:12px;right:12px;bottom:var(--gir-bottom-gap,21px);width:auto;height:60vh;background:var(--gir-bg,#202124);color:var(--gir-fg,#eee);display:none;z-index:2147483647;font:13px Arial,sans-serif;overflow:hidden}
       :host(.gir-open){display:flex}
       .gir-resize-edge{position:absolute;top:0;left:0;right:0;z-index:2;height:14px;cursor:ns-resize;touch-action:none;display:flex;justify-content:flex-end;align-items:flex-start;background:transparent}
       .gir-resize-edge:after{content:"";display:block;width:44px;height:4px;margin:4px 178px 0 0;border-radius:4px;background:#686b70}
@@ -355,8 +401,9 @@
       .gir-actions svg{display:none}
       .gir-actions button{color:var(--gir-button-text,#f1f3f4);background:var(--gir-button,#3c4043);border:0;border-radius:22px;padding:10px 12px;cursor:pointer;font:600 17px Arial,sans-serif}
       .gir-actions button:hover{background:var(--gir-button-hover,#4b4f52)}
-      .gir-controls{display:flex;justify-content:center;gap:6px;margin:6px 0 14px}
-      .gir-controls button{width:48px;height:44px;border:0;border-radius:22px;background:var(--gir-button,#3c4043);color:var(--gir-button-text,#f1f3f4);font:600 26px Arial,sans-serif;line-height:1;cursor:pointer}
+      .gir-controls{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:6px 0 14px}
+      .gir-controls .gir-copy-label{display:none}
+      .gir-controls button{flex:none;width:40px;height:40px;border:0;border-radius:22px;background:var(--gir-button,#3c4043);color:var(--gir-button-text,#f1f3f4);font:600 26px Arial,sans-serif;line-height:1;cursor:pointer}
       .gir-controls button:hover:not(:disabled){background:var(--gir-button-hover,#4b4f52)}
       .gir-controls button:disabled{opacity:.38;cursor:default}
       .gir-thumbnails{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:14px}
@@ -368,7 +415,7 @@
       .gir-native-save>button{align-self:flex-start;margin:8px;padding:8px 14px;border:0;border-radius:20px;background:var(--gir-button,#3c4043);color:var(--gir-fg,#eee);cursor:pointer}
       .gir-native-save iframe{width:100%;flex:1;min-height:0;border:0;background:white}
       .gir-stack{display:none}
-      :host(.gir-vertical){left:auto;top:var(--gir-top,150px);right:12px;bottom:12px;width:clamp(320px,63vw,840px);max-width:var(--gir-max-width,75vw);height:auto!important;border-radius:12px}
+      :host(.gir-vertical){left:auto;top:var(--gir-top,150px);right:12px;bottom:var(--gir-bottom-gap,21px);width:clamp(320px,63vw,840px);max-width:var(--gir-max-width,75vw);height:auto!important;border-radius:12px}
       :host(.gir-vertical) .gir-info{display:none}
       :host(.gir-vertical) .gir-stack{display:block;width:100%;height:100%;overflow-y:auto;scrollbar-color:var(--gir-secondary,#c4c7c5) var(--gir-bg,#202124);box-sizing:border-box;padding:0 14px 18px}
       :host(.gir-vertical) .gir-controls{position:sticky;top:0;z-index:1;background:var(--gir-bg,#202124);margin:0 -4px;padding:12px 0;gap:4px;justify-content:space-between;flex-wrap:wrap}
@@ -380,9 +427,13 @@
       :host(.gir-vertical) .gir-host{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;overflow-wrap:normal}
       :host(.gir-vertical) .gir-resize-edge{top:0;bottom:0;left:0;right:auto;width:10px;height:auto;cursor:ew-resize}
       :host(.gir-vertical) .gir-resize-edge:after{width:4px;height:44px;margin:auto 0 auto 3px}
-      @media(max-width:780px){:host{left:6px;right:6px;bottom:6px;height:60vh}.gir-info{width:240px;padding:18px 6px 6px 12px}.gir-resize-edge:after{margin-right:98px}.gir-info h2,.gir-title{font-size:21px}.gir-host{font-size:15px}.gir-actions button{font-size:15px;padding:8px 10px}.gir-controls button{width:38px;height:42px;font-size:23px}}
-    </style><div class="gir-resize-edge" role="separator" aria-orientation="horizontal" aria-label="Resize preview panel" tabindex="0" title="Drag to resize; double-click to reset"></div><div class="gir-photo"><img alt=""></div><aside class="gir-info"><div class="gir-controls" aria-label="Preview controls"><button class="gir-close" type="button" aria-label="Close preview" title="Close">×</button><button class="gir-prev" type="button" aria-label="Previous image" title="Previous">←</button><button class="gir-next" type="button" aria-label="Next image" title="Next">→</button><button class="gir-save" type="button" aria-label="Save photo" title="Save photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2zm0 15-5-2.2L7 18V5h10z"/></svg></button><button class="gir-lens" type="button" aria-label="Search with Google Lens" title="Search with Google Lens"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H5a2 2 0 0 0-2 2v2h2V5h2zm10 0v2h2v2h2V5a2 2 0 0 0-2-2zM5 17H3v2a2 2 0 0 0 2 2h2v-2H5zm14 0v2h-2v2h2a2 2 0 0 0 2-2v-2zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg></button></div><h2><a class="gir-title" target="_blank" rel="noopener"></a></h2><a class="gir-host" target="_blank" rel="noopener"></a><div class="gir-actions"><button class="gir-copy-url" type="button" aria-label="Copy photo URL" title="Copy photo URL"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 13.4a4 4 0 0 0 5.7 0l3.1-3.1a4 4 0 0 0-5.7-5.7l-1.8 1.8m1.5 4.2a4 4 0 0 0-5.7 0l-3.1 3.1a4 4 0 0 0 5.7 5.7l1.8-1.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="gir-copy-label">Copy photo URL</span></button><button class="gir-copy-image" type="button" aria-label="Copy image" title="Copy image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3M9 3h6v4H9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="gir-copy-label">Copy image</span></button></div><div class="gir-thumbnails" aria-label="Previous and next images"></div></aside><div class="gir-stack"></div>`;
+      @media(max-width:780px){:host{--gir-bottom-gap:11px;left:6px;right:6px;height:60vh}.gir-info{width:240px;padding:18px 6px 6px 12px}.gir-resize-edge:after{margin-right:98px}.gir-info h2,.gir-title{font-size:21px}.gir-host{font-size:15px}.gir-actions button{font-size:15px;padding:8px 10px}.gir-controls button{width:38px;height:42px;font-size:23px}}
+    </style><div class="gir-resize-edge" role="separator" aria-orientation="horizontal" aria-label="Resize preview panel" tabindex="0" title="Drag to resize; double-click to reset"></div><div class="gir-photo"><img alt=""></div><aside class="gir-info"><div class="gir-controls" aria-label="Preview controls"><button class="gir-close" type="button" aria-label="Close preview" title="Close">×</button><button class="gir-prev" type="button" aria-label="Previous image" title="Previous">←</button><button class="gir-next" type="button" aria-label="Next image" title="Next">→</button><button class="gir-float" type="button" aria-label="Float image above other tabs" title="Float image above other tabs" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v16H3z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M11 11h8v7h-8z"/></svg></button><button class="gir-save" type="button" aria-label="Save photo" title="Save photo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2zm0 15-5-2.2L7 18V5h10z"/></svg></button><button class="gir-lens" type="button" aria-label="Search with Google Lens" title="Search with Google Lens"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3H5a2 2 0 0 0-2 2v2h2V5h2zm10 0v2h2v2h2V5a2 2 0 0 0-2-2zM5 17H3v2a2 2 0 0 0 2 2h2v-2H5zm14 0v2h-2v2h2a2 2 0 0 0 2-2v-2zM12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/></svg></button></div><h2><a class="gir-title" target="_blank" rel="noopener"></a></h2><a class="gir-host" target="_blank" rel="noopener"></a><div class="gir-actions"><button class="gir-copy-url" type="button" aria-label="Copy photo URL" title="Copy photo URL"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 13.4a4 4 0 0 0 5.7 0l3.1-3.1a4 4 0 0 0-5.7-5.7l-1.8 1.8m1.5 4.2a4 4 0 0 0-5.7 0l-3.1 3.1a4 4 0 0 0 5.7 5.7l1.8-1.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span class="gir-copy-label">Copy photo URL</span></button><button class="gir-copy-image" type="button" aria-label="Copy image" title="Copy image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3M9 3h6v4H9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span class="gir-copy-label">Copy image</span></button></div><div class="gir-thumbnails" aria-label="Previous and next images"></div></aside><div class="gir-stack"></div>`;
     viewer.querySelector('.gir-close').addEventListener('click', close);
+    const floatButton = viewer.querySelector('.gir-float');
+    floatButton.disabled = !window.documentPictureInPicture;
+    if (floatButton.disabled) floatButton.title = 'Floating images require a browser with Document Picture-in-Picture support.';
+    floatButton.addEventListener('click', toggleFloatingImage);
     viewer.querySelector('.gir-prev').addEventListener('click', () => move(-1));
     viewer.querySelector('.gir-next').addEventListener('click', () => move(1));
     const resizeEdge = viewer.querySelector('.gir-resize-edge');
@@ -460,21 +511,20 @@
     });
     viewer.querySelector('.gir-copy-image').addEventListener('click', async event => {
       const button = event.currentTarget;
+      button.disabled = true;
       try {
         const imageUrl = viewer.querySelector('.gir-photo img').src;
-        // Start the clipboard write during the click. The PNG promise can finish
-        // after the worker fetch without losing the user's clipboard gesture.
-        const png = prepareClipboardImage(imageUrl);
+        const png = await prepareClipboardImage(imageUrl);
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
         button.title = '';
         copyFeedback(button, 'Copied image');
         setTimeout(() => { copyFeedback(button, 'Copy image'); }, 1400);
       } catch (error) {
         console.error('Classic Google Images: Copy image failed', error);
-        button.title = error.message || 'Unable to copy this image.';
         copyFeedback(button, 'Copy failed');
+        button.title = error.message || 'Unable to copy this image.';
         setTimeout(() => { copyFeedback(button, 'Copy image'); }, 1400);
-      }
+      } finally { button.disabled = false; }
     });
     window.addEventListener('keydown', event => {
       if (!panel.classList.contains('gir-open')) return;
@@ -506,9 +556,9 @@
     }, true);
     window.addEventListener('blur', stopArrowNavigation);
     window.addEventListener('focusin', stopArrowNavigation);
-    window.addEventListener('resize', () => { fitPreviewImage(); updateCollageSpace(); scheduleHalo(); });
-    window.addEventListener('scroll', scheduleHalo, { capture: true, passive: true });
-    new ResizeObserver(() => { fitPreviewImage(); updateCollageSpace(); scheduleHalo(); }).observe(panel);
+    window.addEventListener('resize', () => { fitPreviewImage(); updateCollageSpace(); schedulePreviewUpdate(); });
+    window.addEventListener('scroll', schedulePreviewUpdate, { capture: true, passive: true });
+    new ResizeObserver(() => { fitPreviewImage(); updateCollageSpace(); schedulePreviewUpdate(); }).observe(panel);
     applySettings();
     return panel;
   }
@@ -569,9 +619,9 @@
     if (root.parentElement !== document.documentElement) document.documentElement.append(root);
   }
 
-  let collageHalo = null;
+  let selectionBorder = null;
   let collageSpace = null;
-  let haloFrame = null;
+  let previewFrame = null;
 
   function activeCollageImage() {
     const item = items[activeIndex];
@@ -579,7 +629,7 @@
     const matches = image => image.isConnected &&
       (thumbnailKey(image.currentSrc || image.src) || image.currentSrc || image.src) === (thumbnailKey(item.thumb) || item.thumb);
     // Google may recycle result nodes after scrolling. Match the captured
-    // thumbnail before drawing a halo around a live node.
+    // thumbnail before scrolling to a live node.
     if (matches(item.image)) return item.image;
     return [...document.images].find(image => matches(image) && !panel?.contains(image)) || null;
   }
@@ -650,7 +700,7 @@
     }
     const available = Math.max(0, panel.getBoundingClientRect().left - collageTarget.getBoundingClientRect().left - 12);
     collageTarget.style.setProperty('--gir-collage-width', `${available}px`);
-    scheduleHalo();
+    schedulePreviewUpdate();
   }
 
   function verticalPanelTop() {
@@ -677,12 +727,12 @@
     collageSpace.style.height = `${window.innerHeight - panel.getBoundingClientRect().top + 24}px`;
   }
 
-  function scheduleHalo() {
-    if (haloFrame !== null) return;
-    haloFrame = requestAnimationFrame(() => {
-      haloFrame = null;
+  function schedulePreviewUpdate() {
+    if (previewFrame !== null) return;
+    previewFrame = requestAnimationFrame(() => {
+      previewFrame = null;
       updatePanelTop();
-      paintCollageHalo();
+      paintSelectionBorder();
     });
   }
 
@@ -690,8 +740,9 @@
     let bottom = 0;
     // Measure Google's live header rows: their height changes with wrapping,
     // viewport size, and the sticky search/category bars used while scrolling.
-    for (const row of document.querySelectorAll('#searchform, #hdtb, #appbar, .UpCcGe, header, [role="navigation"], [role="search"]')) {
+    for (const row of document.querySelectorAll('#searchform, #hdtb, #appbar, #UpCcGe, .UpCcGe, header, [role="navigation"], [role="search"]')) {
       const rect = row.getBoundingClientRect();
+      if (getComputedStyle(row).visibility === 'hidden') continue;
       if (rect.width >= window.innerWidth * 0.4 && rect.top < window.innerHeight && rect.bottom > 0) {
         bottom = Math.max(bottom, rect.bottom);
       }
@@ -699,26 +750,25 @@
     return bottom;
   }
 
-  function paintCollageHalo() {
+  function paintSelectionBorder() {
     const image = panel?.classList.contains('gir-open') && activeCollageImage();
     if (!image) {
-      if (collageHalo) collageHalo.style.display = 'none';
+      if (selectionBorder) selectionBorder.style.display = 'none';
       return;
     }
-    if (!collageHalo) {
-      collageHalo = document.createElement('div');
-      collageHalo.setAttribute('aria-hidden', 'true');
-      collageHalo.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;box-sizing:border-box;border:3px solid #ff5252;border-radius:8px;box-shadow:0 0 0 4px #ff303055,0 0 22px 8px #ff303099;';
-      document.documentElement.append(collageHalo);
+    if (!selectionBorder) {
+      selectionBorder = document.createElement('div');
+      selectionBorder.setAttribute('aria-hidden', 'true');
+      selectionBorder.style.cssText = 'position:fixed;pointer-events:none;z-index:2147483646;box-sizing:border-box;border:5px solid #ff5252;border-radius:8px;';
+      document.documentElement.append(selectionBorder);
     }
     const box = image.getBoundingClientRect();
-    Object.assign(collageHalo.style, {
+    const previewTop = panel.classList.contains('gir-vertical') ? window.innerHeight : panel.getBoundingClientRect().top;
+    Object.assign(selectionBorder.style, {
       display: box.width && box.height ? 'block' : 'none',
-      left: `${box.left - 3}px`, top: `${box.top - 3}px`,
-      width: `${box.width + 6}px`, height: `${box.height + 6}px`,
-      // Include the glow in the clipping bounds so it cannot paint over the
-      // search/category bars or the preview, even during manual scrolling.
-      clipPath: `inset(${Math.max(-40, collageVisibleTop() - box.top + 3)}px -40px ${Math.max(-40, box.bottom + 3 - (panel.classList.contains('gir-vertical') ? window.innerHeight : panel.getBoundingClientRect().top))}px -40px)`
+      left: `${box.left - 5}px`, top: `${box.top - 5}px`,
+      width: `${box.width + 10}px`, height: `${box.height + 10}px`,
+      clipPath: `inset(${Math.max(0, collageVisibleTop() - box.top + 5)}px 0 ${Math.max(0, box.bottom + 5 - previewTop)}px 0)`
     });
   }
 
@@ -734,7 +784,8 @@
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }
 
-  function show(index, reveal = false) {
+  function show(index, reveal = false, restoring = false) {
+    if (!restoring) cancelPreviewRestore();
     if (!items.length) return;
     activeIndex = Math.max(0, Math.min(items.length - 1, index));
     const item = items[activeIndex];
@@ -755,9 +806,10 @@
     renderThumbnails();
     root.classList.add('gir-open');
     updateCollageSpace();
-    paintCollageHalo();
+    paintSelectionBorder();
     if (reveal) revealCollageImage();
     preloadNeighbors();
+    rememberPreview(item);
   }
 
   function setDetails(item) {
@@ -774,6 +826,7 @@
       if (request !== imageRequest) return;
       item.dimensions = { width: full.naturalWidth, height: full.naturalHeight };
       activeDimensions = item.dimensions;
+      rememberPreview(item);
       const previousLayout = panel.classList.contains('gir-vertical');
       applyLayout();
       fitPreviewImage();
@@ -840,9 +893,14 @@
     show(nextIndex, reveal);
   }
 
-  function close() {
+  function close(forget = true) {
+    cancelPreviewRestore();
+    if (forget) {
+      try { sessionStorage.removeItem(previewPageKey); } catch { /* Storage can be disabled. */ }
+    }
     if (!panel) return;
     stopArrowNavigation();
+    floatingWindow?.close();
     for (const image of preloadedImages.values()) {
       image.onload = null;
       image.removeAttribute('src');
@@ -852,17 +910,104 @@
     activeDimensions = null;
     viewer.querySelector('.gir-native-save')?.remove();
     panel.classList.remove('gir-open');
+    paintSelectionBorder();
     restoreCollageLayout();
     collageSpace?.remove();
     collageSpace = null;
-    paintCollageHalo();
     const image = viewer.querySelector('.gir-photo img');
     image.removeAttribute('src');
     image.style.width = '';
     image.style.height = '';
   }
 
+  // Session storage stays in this tab and is keyed by the search page, so
+  // returning to another query restores that query's own selected image.
+  function previewStorageKey() {
+    const url = new URL(location.href);
+    url.hash = '';
+    return 'gir-preview:' + url.href;
+  }
+
+  let previewPageKey = previewStorageKey();
+  let restoreObserver = null;
+  let restoreTimer = null;
+
+  function cancelPreviewRestore() {
+    restoreObserver?.disconnect();
+    restoreObserver = null;
+    clearTimeout(restoreTimer);
+    restoreTimer = null;
+  }
+
+  function rememberPreview(item) {
+    try {
+      sessionStorage.setItem(previewPageKey, JSON.stringify({
+        src: item.src, thumb: item.thumb, page: item.page,
+        title: item.title, nativePreview: item.nativePreview,
+        dimensions: item.dimensions
+      }));
+    } catch { /* A full or disabled session store must not interrupt viewing. */ }
+  }
+
+  function readPreview(key) {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(key));
+      const httpUrl = value => {
+        try { const url = new URL(value); return /^https?:$/.test(url.protocol) ? url.href : ''; }
+        catch { return ''; }
+      };
+      if (!saved || !httpUrl(saved.src)) return null;
+      const native = new URL(saved.nativePreview || '/imgres', location.origin);
+      if (native.origin !== location.origin || native.pathname !== '/imgres') return null;
+      const dimensions = saved.dimensions;
+      return {
+        src: httpUrl(saved.src), thumb: httpUrl(saved.thumb) || httpUrl(saved.src),
+        page: httpUrl(saved.page), title: typeof saved.title === 'string' ? saved.title : '',
+        nativePreview: native.href,
+        dimensions: dimensions && Number.isFinite(dimensions.width) && dimensions.width > 0 && Number.isFinite(dimensions.height) && dimensions.height > 0 ? dimensions : undefined
+      };
+    } catch { return null; }
+  }
+
+  function restorePreview() {
+    cancelPreviewRestore();
+    const key = previewStorageKey();
+    if (key !== previewPageKey) close(false);
+    previewPageKey = key;
+    const saved = readPreview(key);
+    if (!saved) return;
+    const matchResults = () => {
+      const candidates = collectItems();
+      const savedThumbnail = thumbnailKey(saved.thumb) || saved.thumb;
+      const index = candidates.findIndex(item =>
+        (thumbnailKey(item.thumb) || item.thumb) === savedThumbnail ||
+        (item.src === saved.src && (!saved.page || item.page === saved.page)));
+      if (index < 0) return false;
+      if (isGoogleThumbnail(candidates[index].src) && !isGoogleThumbnail(saved.src)) candidates[index].src = saved.src;
+      items = candidates;
+      show(index, false, true);
+      return true;
+    };
+    if (matchResults()) return;
+    // Restore the picture immediately, even when Google has not loaded its
+    // result tile yet. Reconnect navigation and the red border when it arrives.
+    items = [{ ...saved, image: document.createElement('img'), anchor: null }];
+    show(0, false, true);
+    restoreObserver = new MutationObserver(() => {
+      if (matchResults()) cancelPreviewRestore();
+    });
+    restoreObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    restoreTimer = setTimeout(cancelPreviewRestore, 15000);
+  }
+
   applySettings();
+  window.addEventListener('pagehide', () => {
+    if (panel?.classList.contains('gir-open') && items[activeIndex]) rememberPreview(items[activeIndex]);
+    cancelPreviewRestore();
+  });
+  window.addEventListener('pageshow', restorePreview);
+  window.addEventListener('popstate', restorePreview);
+  restorePreview();
 
   document.addEventListener('click', event => {
     if (panel && event.composedPath().includes(panel)) return;

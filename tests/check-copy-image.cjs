@@ -6,7 +6,7 @@ const worker=fs.readFileSync(root+'js/clipboard-worker.js','utf8');
 const source=fs.readFileSync(root+'js/modern.js','utf8');
 const pngBytes=Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=','base64'));
 let handler, response;
-const workerContext={URL,Uint8Array,String,btoa,chrome:{runtime:{onMessage:{addListener(fn){handler=fn;}}}},fetch:async()=>response};
+const workerContext={AbortSignal,URL,Uint8Array,String,btoa,chrome:{runtime:{onMessage:{addListener(fn){handler=fn;}}}},fetch:async()=>response};
 vm.createContext(workerContext);vm.runInContext(worker,workerContext);
 function send(url){return new Promise(resolve=>{assert.equal(handler({type:'gir-fetch-image',url},{},r=>resolve(JSON.parse(JSON.stringify(r)))),true);});}
 (async()=>{
@@ -23,9 +23,9 @@ function send(url){return new Promise(resolve=>{assert.equal(handler({type:'gir-
  assert.equal(png.type,'image/png');assert.deepEqual(Buffer.from(await png.arrayBuffer()),Buffer.from(pngBytes));assert(closed);
  response=new Response('Forbidden',{status:403});assert.match((await send('https://images.example/blocked')).error,/403/);
  response=new Response('<html>error</html>',{headers:{'content-type':'text/html'}});assert.equal((await send('https://images.example/html')).ok,false);
- assert.equal(JSON.parse(fs.readFileSync(root+'manifest.json')).version,'2.6.1');
+ assert.equal(JSON.parse(fs.readFileSync(root+'manifest.json')).version,'2.6.9');
  const click=source.slice(source.indexOf("viewer.querySelector('.gir-copy-image').addEventListener"),source.indexOf("window.addEventListener('keydown'"));
- assert(!click.includes('await prepareClipboardImage'));
+ assert(click.includes("await prepareClipboardImage(imageUrl)"));
  assert(click.includes("new ClipboardItem({ 'image/png': png })"));
- console.log('Passed: image bytes survive Chrome JSON messages; content reconstructs PNG bytes; bitmap closes; HTTP/non-image errors reported; clipboard write starts with a promise during click; version 2.6.1.');
+ console.log('Passed: image bytes survive Chrome JSON messages; content reconstructs PNG bytes; bitmap closes; HTTP/non-image errors reported; clipboard write uses a prepared PNG in the focused tab; version 2.6.9.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

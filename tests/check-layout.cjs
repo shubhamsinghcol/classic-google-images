@@ -13,13 +13,13 @@ root.append(photo,info,stack);info.append(controls,title,url,actions,thumbnails)
 const mapping={'.gir-info':info,'.gir-photo':photo,'.gir-controls':controls,'.gir-actions':actions,'h2':title,'.gir-host':url,'.gir-stack':stack,'.gir-resize-edge':edge,'.gir-thumbnails':thumbnails,'.gir-copy-url':copyUrl,'.gir-copy-image':copyImage};
 const classes=new Set(); const image={naturalWidth:1000,naturalHeight:700,style:{}};
 photo.clientWidth=532;photo.clientHeight=697;
-const context={viewer:{querySelector:s=>s==='.gir-photo img'?image:mapping[s]},panel:{shadowRoot:root,style:{removeProperty(){}},classList:{contains:c=>classes.has(c),toggle:(c,v)=>v?classes.add(c):classes.delete(c)}},currentLayout:()=>context.settings.layout,settings:{layout:'vertical',upscalePercent:100},verticalPanelTop:()=>150,window:{innerHeight:847,innerWidth:1440},updateCollageSpace(){},scheduleHalo(){}};
+const context={viewer:{querySelector:s=>s==='.gir-photo img'?image:mapping[s]},panel:{shadowRoot:root,style:{removeProperty(){}},classList:{contains:c=>classes.has(c),toggle:(c,v)=>v?classes.add(c):classes.delete(c)}},currentLayout:()=>context.settings.layout,settings:{layout:'vertical',upscalePercent:100},verticalPanelTop:()=>150,window:{innerHeight:847,innerWidth:1440},updateCollageSpace(){},schedulePreviewUpdate(){}};
 vm.createContext(context);
 vm.runInContext(source.slice(source.indexOf('  function verticalWidthLimit()'),source.indexOf('  function cleanGoogleMarkup'))+source.slice(source.indexOf('  function fitPreviewImage()'),source.indexOf('  function placePanel('))+'\nthis.layout=applyLayout;this.fit=fitPreviewImage;',context);
 context.layout();assert.deepEqual(stack.children.map(x=>x.name),['controls','photo','title','url','thumbnails']);assert.equal(edge['aria-orientation'],'vertical');assert.deepEqual(controls.children.map(x=>x.name),['copyImage','copyUrl']);
 context.fit();assert.equal(image.style.width,'532px');assert.equal(photo.style.height,'372px');
 image.naturalWidth=700;image.naturalHeight=2000;context.fit();assert.equal(image.style.height,'597px');
-context.settings.layout='horizontal';context.layout();assert.deepEqual(info.children.map(x=>x.name),['controls','title','url','actions','thumbnails']);assert.equal(photo.parent,root);assert.equal(edge['aria-orientation'],'horizontal');assert.deepEqual(actions.children.map(x=>x.name),['copyUrl','copyImage']);
+context.settings.layout='horizontal';context.layout();assert.deepEqual(info.children.map(x=>x.name),['controls','title','url','actions','thumbnails']);assert.equal(photo.parent,root);assert.equal(edge['aria-orientation'],'horizontal');assert.deepEqual(controls.children.map(x=>x.name),['copyImage','copyUrl']);assert.deepEqual(actions.children,[]);
 const popup=fs.readFileSync('popup.js','utf8');assert(popup.includes("querySelectorAll('input[name=\"scale\"]')"));assert(popup.includes("chrome.storage.sync.set({ layout: radio.value, defaultLayout:"));
 console.log('Passed: vertical order; horizontal restoration preserves nodes; landscape fills width; portrait fits height; layout storage is separate from enlargement.');
 let nativeClicks=0;

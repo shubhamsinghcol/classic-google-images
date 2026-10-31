@@ -2,17 +2,20 @@
 
 ![Classic Google Images icon](icon/128.png)
 
-A Chrome and Brave extension with a spacious classic preview panel for Google Images. Current version: **2.6.1**.
+A Chrome and Brave extension with a spacious classic preview panel for Google Images. Current version: **2.6.9**.
 
 ## Features
 
-- Resizable horizontal or right-side vertical preview with dark charcoal, white and sepia themes.
+- Resizable horizontal or right-side vertical preview with dark charcoal, white and sepia themes. Two system themes switch automatically between white and black, or sepia and black, as system appearance changes.
 - Illustrated Horizontal, Vertical and Auto layout selector, with vertical as the default for new installs. Auto follows the image shape and uses your chosen default for near-square images.
 - Google collection Save and Google Lens controls beside close and navigation.
 - Vertical preview prioritizes image size, with copy icons in the top row and neighboring-image previews below the title and URL; choose the layout in the toolbar popup. The collage reflows beside it as you resize, with preview width capped at 75% of the window.
 - Original image URLs when available, with thumbnail fallback.
-- Copy photo URL and copy image buttons.
+- Copy photo URL and copy image buttons. Copy retains the source image dimensions, independent of preview size.
+- Float a picture above other tabs with the Picture-in-Picture button; return using the browser’s Back to tab button (supported Chromium browsers).
+- Image categories scroll away naturally with the page instead of floating back on slight upward scrolls.
 - Previous and next image previews, without wrapping at the ends.
+- Reopens the selected image after refresh or Back/Forward navigation. Closing the preview clears that page’s saved selection; selections stay in the current tab’s session storage.
 - Arrow key navigation at up to four images per second and preloading of the next four images.
 - Adjustable enlargement cap, defaulting to 2×.
 
@@ -25,7 +28,7 @@ A Chrome and Brave extension with a spacious classic preview panel for Google Im
 
 ## Privacy and permissions
 
-Settings use browser sync storage. The extension does not send browsing activity to an analytics service. Image copying downloads the selected image through the background worker; images may be hosted on any website, which requires broad host permission. Clipboard access is used when you click Copy image or Copy photo URL. Image hosts may refuse downloads, and Google's changing markup can affect image extraction.
+Settings use browser sync storage. The selected image and source metadata are kept in tab-local session storage to restore previews on return. The extension does not send browsing activity to an analytics service. Image copying downloads the selected image through the background worker; images may be hosted on any website, which requires broad host permission. Image bytes are converted to PNG at their native dimensions and written to the clipboard from the focused preview tab. Clipboard access is used when you click Copy image or Copy photo URL. Image hosts may refuse downloads, and Google's changing markup can affect image extraction.
 
 ## License and provenance
 

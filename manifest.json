@@ -1,7 +1,7 @@
 {
   "author": "Shubham Singh",
   "name": "Classic Google Images",
-  "version": "2.6.1",
+  "version": "2.6.9",
   "manifest_version": 3,
   "permissions": [
     "storage",

@@ -50,13 +50,13 @@
           </span>
         </label>
       </div>
-      <p class="help orientation-help">Auto follows the image shape. Near-square images use your default below.</p>
-    </fieldset>
-    <fieldset>
-      <legend>Default orientation</legend>
-      <div class="layout-options">
-        <label><input type="radio" name="default-layout" value="horizontal"><span>Horizontal</span></label>
-        <label><input type="radio" name="default-layout" value="vertical"><span>Vertical</span></label>
+      <div id="auto-orientation" hidden>
+        <p class="help orientation-help">Auto follows the image shape. Near-square images use your default below.</p>
+        <p id="default-orientation-label">Default orientation</p>
+        <div class="layout-options" role="group" aria-labelledby="default-orientation-label">
+          <label><input type="radio" name="default-layout" value="horizontal"><span>Horizontal</span></label>
+          <label><input type="radio" name="default-layout" value="vertical"><span>Vertical</span></label>
+        </div>
       </div>
     </fieldset>
     <fieldset>
@@ -65,6 +65,11 @@
         <button class="swatch dark" type="button" data-theme="dark" title="Dark charcoal" aria-label="Dark charcoal theme"></button>
         <button class="swatch light" type="button" data-theme="light" title="White light" aria-label="White light theme"></button>
         <button class="swatch sepia" type="button" data-theme="sepia" title="Sepia" aria-label="Sepia theme"></button>
+      </div>
+      <p class="help system-theme-help">Follow system appearance</p>
+      <div class="system-theme-options">
+        <button class="system-theme" type="button" data-theme="system-light" aria-label="System theme: white in light mode, black in dark mode" aria-pressed="false"><span class="split-swatch white-black" aria-hidden="true"></span><span>White / Black</span></button>
+        <button class="system-theme" type="button" data-theme="system-sepia" aria-label="System theme: sepia in light mode, black in dark mode" aria-pressed="false"><span class="split-swatch sepia-black" aria-hidden="true"></span><span>Sepia / Black</span></button>
       </div>
     </fieldset>
     <fieldset>
